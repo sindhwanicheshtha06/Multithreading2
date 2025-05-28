@@ -1,0 +1,131 @@
+import java.net.URL;
+import java.net.MalformedURLException;
+import java.util.List;
+
+class ThreadRunnable implements Runnable {
+    private Queue<String> urls;
+    private Set<String> visitedUrls;
+    private String startUrl;
+    private HtmlParser htmlParser;
+    private boolean isStopped;
+
+    public ThreadRunnable(String startUrl, HtmlParser htmlParser, Queue<String> urls, Set<String> visitedUrls) {
+        this.urls = urls;
+        this.visitedUrls = visitedUrls;
+        this.startUrl = startUrl;
+        this.htmlParser = htmlParser;
+        this.isStopped = false;
+    }
+
+    public void doStop() {
+        this.isStopped = true;
+        synchronized (urls) {
+            urls.notifyAll();
+        }
+    }
+
+    public String getHostName(String urlString) {
+        try {
+            URL url = new URL(urlString);
+            return url.getHost();
+        } catch (MalformedURLException ex) {
+
+        }
+        return urlString;
+    }
+
+    @Override
+    public void run() {
+
+        while (!isStopped) {
+            String nextUrl;
+            synchronized (urls) {
+                while (urls.isEmpty() && !isStopped) {
+                    try {
+                        System.out.println("Waiting..");
+                        urls.wait();
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                nextUrl = urls.remove();
+            }
+
+            synchronized (visitedUrls) {
+                this.visitedUrls.add(nextUrl);
+            }
+            List<String> neighbourUrls = this.htmlParser.getUrls(nextUrl);
+            for (String neighbourUrl : neighbourUrls) {
+                if (!this.getHostName(neighbourUrl).equals(this.getHostName(this.startUrl))) {
+                    continue;
+                }
+                synchronized (visitedUrls) {
+                    if (this.visitedUrls.contains(neighbourUrl)) {
+                        continue;
+                    }
+                }
+                synchronized (urls) {
+                    this.urls.add(neighbourUrl);
+                    if (this.urls.size() == 1) {
+                        urls.notifyAll();
+                    }
+                }
+            }
+        }
+    }
+}
+
+class WebCrawler {
+    private Queue<String> urls;
+    private Set<String> visitedUrls;
+    private List<ThreadRunnable> workers;
+    private int noOfWorkers;
+    private String startUrl;
+    private HtmlParser htmlParser;
+
+    public WebCrawler(int noOfWorkers, String startUrl, HtmlParser htmlParser, Set<String> visitedUrls) {
+        this.noOfWorkers = noOfWorkers;
+        this.workers = new ArrayList<ThreadRunnable>();
+        this.urls = new LinkedList<>();
+        this.startUrl = startUrl;
+        this.urls.add(startUrl);
+        this.visitedUrls = visitedUrls;
+        this.htmlParser = htmlParser;
+        this.createWorkers();
+    }
+
+    private void createWorkers() {
+        for (int i = 0; i < this.noOfWorkers; i++) {
+            ThreadRunnable worker = new ThreadRunnable(this.startUrl, this.htmlParser, urls, visitedUrls);
+            workers.add(worker);
+        }
+    }
+
+    public void startCrawling() {
+        for (ThreadRunnable runnable : this.workers) {
+            new Thread(runnable).start();
+        }
+    }
+
+    public void stop() {
+        for (ThreadRunnable runnable : this.workers) {
+            runnable.doStop();
+        }
+    }
+}
+
+class Solution {
+
+    public List<String> crawl(String startUrl, HtmlParser htmlParser) {
+        Set<String> result = new HashSet<>();
+        WebCrawler crawler = new WebCrawler(10, startUrl, htmlParser, result);
+        crawler.startCrawling();
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+
+        }
+        crawler.stop();
+        return new ArrayList<>(result);
+    }
+}
