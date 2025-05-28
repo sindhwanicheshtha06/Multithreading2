@@ -1,0 +1,60 @@
+class H2O {
+
+    private int hydrogenRequests;
+    private int oxygenRequests;
+    private int hydrogenConsumed;
+    private int oxygenConsumed;
+    private boolean consume;
+
+    public H2O() {
+        this.hydrogenRequests = 0;
+        this.oxygenRequests = 0;
+        this.hydrogenConsumed = 0;
+        this.oxygenConsumed = 0;
+        this.consume = false;
+    }
+
+    public void hydrogen(Runnable releaseHydrogen) throws InterruptedException {
+        synchronized (this) {
+            this.hydrogenRequests++;
+            if (this.hydrogenRequests >= 2 && this.oxygenRequests >= 1) {
+                this.consume = true;
+                notifyAll();
+            }
+            while (!consume || this.hydrogenConsumed == 2) {
+                wait();
+            }
+            // releaseHydrogen.run() outputs "H". Do not change or remove this line.
+            this.hydrogenRequests--;
+            releaseHydrogen.run();
+            this.hydrogenConsumed++;
+            if (this.hydrogenConsumed == 2 && this.oxygenConsumed == 1) {
+                this.hydrogenConsumed = 0;
+                this.oxygenConsumed = 0;
+                this.consume = false;
+            }
+        }
+    }
+
+    public void oxygen(Runnable releaseOxygen) throws InterruptedException {
+        synchronized (this) {
+            this.oxygenRequests++;
+            if (this.hydrogenRequests >= 2 && this.oxygenRequests >= 1) {
+                this.consume = true;
+                notifyAll();
+            }
+            while (!consume || this.oxygenConsumed == 1) {
+                wait();
+            }
+            releaseOxygen.run();
+            this.oxygenConsumed++;
+            if (this.hydrogenConsumed == 2 && this.oxygenConsumed == 1) {
+                this.hydrogenConsumed = 0;
+                this.oxygenConsumed = 0;
+                this.consume = false;
+            }
+        }
+        // releaseOxygen.run() outputs "O". Do not change or remove this line.
+
+    }
+}
