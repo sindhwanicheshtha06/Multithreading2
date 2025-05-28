@@ -1,0 +1,36 @@
+class FooBar {
+    private int n;
+    private AtomicBoolean printFoo;
+
+    public FooBar(int n) {
+        this.n = n;
+        this.printFoo = new AtomicBoolean(true);
+    }
+
+    public void foo(Runnable printFoo) throws InterruptedException {
+
+        for (int i = 0; i < n; i++) {
+            while (!this.printFoo.get()) {
+
+            }
+            // printFoo.run() outputs "foo". Do not change or remove this line.
+            printFoo.run();
+            System.out.println("foo");
+            this.printFoo.set(false);
+        }
+
+    }
+
+    public void bar(Runnable printBar) throws InterruptedException {
+
+        for (int i = 0; i < n; i++) {
+            while (this.printFoo.get()) {
+
+            }
+            // printBar.run() outputs "bar". Do not change or remove this line.
+            printBar.run();
+            System.out.println("bar");
+            this.printFoo.set(true);
+        }
+    }
+}
