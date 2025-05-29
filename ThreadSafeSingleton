@@ -1,0 +1,71 @@
+package SingletonClass;
+
+// Eager Initialization
+
+class Singleton {
+	private static Singleton instance = new Singleton();
+
+	public Singleton() {
+	}
+
+	public static Singleton getInstance() {
+		return instance;
+	}
+}
+
+// Synchronized keyword
+
+class Singleton2 {
+	private static Singleton2 instance;
+
+	public Singleton2() {
+	}
+
+	public static synchronized Singleton2 getInstance() {
+		if (instance == null) {
+			instance = new Singleton2();
+		}
+		return instance;
+	}
+}
+
+// Volatile and double checked locking
+class Singleton3 {
+	private static Singleton3 instance;
+
+	public Singleton3() {
+	}
+
+	public static Singleton3 getInstance() {
+		if (instance == null) {
+			synchronized (Singleton3.class) {
+				if (instance == null) {
+					instance = new Singleton3();
+				}
+			}
+		}
+		return instance;
+	}
+}
+
+class Singleton4 {
+	private static class SingletonInnerClass {
+		private static Singleton4 instance = new Singleton4();
+	}
+
+	public Singleton4() {
+	}
+
+	public static Singleton4 getInstance() {
+		return SingletonInnerClass.instance;
+	}
+}
+
+public class SingletonClass {
+
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+
+	}
+
+}
