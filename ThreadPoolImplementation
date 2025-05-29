@@ -1,0 +1,147 @@
+package ThreadPool;
+
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.List;
+import java.util.ArrayList;
+
+class Task {
+	private String taskId;
+
+	public Task(String taskId) {
+		this.taskId = taskId;
+	}
+
+	public void run() {
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		System.out.println("Running task " + taskId);
+	}
+}
+
+class PoolThreadRunnable2 implements Runnable {
+
+	private BlockingQueue2<Task> taskQueue;
+	private boolean isStopped;
+
+	public PoolThreadRunnable2(BlockingQueue2<Task> taskQueue) {
+		this.taskQueue = taskQueue;
+		this.isStopped = false;
+	}
+
+	public void doStop() {
+		this.isStopped = true;
+		this.taskQueue.waitingThreadsToStop();
+	}
+
+	@Override
+	public void run() {
+		while (!isStopped) {
+			Task nextTask = this.taskQueue.removeTask();
+			if (nextTask != null) {
+				nextTask.run();
+			}
+		}
+	}
+}
+
+class BlockingQueue2<T> {
+
+	private Queue<T> queue;
+	private int capacity;
+	private boolean stopWaiting;
+
+	public BlockingQueue2(int capacity) {
+		this.queue = new LinkedList<T>();
+		this.capacity = capacity;
+		this.stopWaiting = false;
+	}
+
+	public synchronized void waitingThreadsToStop() {
+		this.stopWaiting = true;
+		notifyAll();
+	}
+
+	public synchronized void add(T task) {
+		while (this.queue.size() == this.capacity && !this.stopWaiting) {
+			try {
+				wait();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		this.queue.add(task);
+		if (this.queue.size() == 1) {
+			notifyAll();
+		}
+	}
+
+	public synchronized T removeTask() {
+		while (this.queue.size() == 0 && !this.stopWaiting) {
+			try {
+				wait();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		if (this.queue.size() == 0) {
+			return null;
+		}
+		T removedTask = this.queue.remove();
+		if (this.queue.size() == this.capacity - 1) {
+			notifyAll();
+		}
+		return removedTask;
+	}
+}
+
+class ThreadPool2 {
+	private int noOfWorkers;
+	private BlockingQueue2<Task> taskQueue;
+	private List<PoolThreadRunnable2> runnables;
+	private boolean isStopped;
+
+	public ThreadPool2(int noOfWorkers, int maxTasks) {
+		this.noOfWorkers = noOfWorkers;
+		this.taskQueue = new BlockingQueue2<Task>(maxTasks);
+		this.runnables = new ArrayList<PoolThreadRunnable2>();
+		this.createWorkers();
+	}
+
+	public void createWorkers() {
+		for (int i = 0; i < noOfWorkers; i++) {
+			this.runnables.add(new PoolThreadRunnable2(taskQueue));
+		}
+	}
+
+	public void submitTask(Task t) {
+		if (!this.isStopped) {
+			this.taskQueue.add(t);
+		}
+	}
+
+	public void start() {
+		for (Runnable runnable : runnables) {
+			new Thread(runnable).start();
+		}
+	}
+
+	public void stop() {
+		this.isStopped = true;
+		for (PoolThreadRunnable2 runnable : runnables) {
+			runnable.doStop();
+		}
+	}
+}
+
+public class ThreadPoolImplementation2 {
+
+	public static void main(String[] args) {
+		// TODO Auto-generated method stub
+
+	}
+
+}
